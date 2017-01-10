@@ -1,0 +1,116 @@
+Some ideas on a very simple proprietary protocol for an mcuio-over-ethernet
+demo (can work on an 802.11 network too): lininoio.
+
+The protocol takes care of encapsulating mcuio packets in ethernet packets
+and managing remote nodes.
+Plus, it allows for other protocols to be transported over the same link and
+to connect to several cpu cores on the same network node (multi-processor boards
+or multi-core processors).
+
+The frame format is the following:
+
+       6         6          2        1          X           Y
++-----------+-----------+--------+---------+-----------+-------------+  
+|           |           | eth    |         |           |   protocol  |
+| dst mac   | src mac   | type   | packet  | header    |   data      |
+|           |           |        | type    |           |             |
++-----------+-----------+--------+---------+-----------+-------------+
+
+
+The first 14 bytes are the usual ethernet header (eth type is a 16 bits
+id equal to TBD), packet type is a single byte, header is a variable
+length sequence of bytes and protocol data is a frame belonging to
+a transported protocol.
+
+* Packet types:
+
+*** Association request:
+ 0           1             3           19            20            22
++-----------+-------------+-----------+-------------+-------------+
+|           |             |           |             |             |
+|  ptype    |  slave id   | slave nm. | nchannels   | chan0_descr |........
+|           |             |           |             |             |
++-----------+-------------+-----------+-------------+-------------+
+
+ptype = 1
+slave id: 2 bytes
+slave name: 16 bytes (zero terminated string. If name is shorter than 16
+      	       	       bytes, it is 0-padded to 16 bytes).
+channel descriptor: 2 bytes containing a core identifier (3 bits) and a
+contents identifier (13 bits):
+
+15     13 12            0
++--------+--------------+
+|        |              |
+|  core  |  protocol_id |
+|        |              |
++--------+--------------+
+
+Max 16 channels are supported.
+
+
+Sample contents identifiers:
+
+0x0001 -> MCUIO v0 (fixed packet lengths)
+0x0002 -> rpmsg packet
+0x0003 -> vt100 terminal (?)
+......................
+
+
+slave id is a 16 bits board identifier. Sample values:
+
+0x0000 -> Arduino STAR
+0x0001 -> YUN
+0x0002 -> ARCH max
+
+
+*** Association reply
+ 0           1           2             4                     
++-----------+-----------+-------------+------..... -------+------------+.....
+|           |           |             |                   |            |
+| ptype     | status    | chanI_dlen  | chanI_data        | chanJ_dlen |
+|           |           |             |                   |            |
++-----------+-----------+-------------+------.....--------+------------+.....
+
+ptype = 2
+status: 0 for OK, or error code
+chanI_dlen: length of association data for channel I
+chanI_data: association data for channel I. Association data can be used by
+            to configure the channel (es. set buffer size or buffering mode).
+
+chanI_dlen is encoded as:
+
+15      12 11          0
++---------+-------------+
+|         |             |
+| chan id | data len    |
+|         |             |
++---------+-------------+
+
+If a channel has no association data, the relevant channel data len is 0.
+
+If total amount of association data does not fit a single packet, the
+host chan send multiple association replies.
+
+
+*** Data on channel I
+
+0            1            3                   
++-----------+------------+-------....----------+
+|           |            |                     |
+| ptype     | chanI_dlen |      cargo          |
+|           |            |                     |
++-----------+------------+-------....----------+
+
+ptype = 3
+
+
+chanI_dlen is encoded as specified above (see Association reply).
+
+There's no deassociation mechanism. Nodes are automatically deassociated when
+silent for a configurable period of time (some seconds tipically).
+A data packet with any chan id and zero data lenght is an "alive" packet, sent
+to notify the host that the lininoio node is still connected and working.
+
+Note: endianness is __little__ (arm and x86 are little, so this looks more
+efficient).
