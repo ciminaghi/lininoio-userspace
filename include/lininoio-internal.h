@@ -1,6 +1,7 @@
 #ifndef __LININOIO_PROTO_H__
 #define __LININOIO_PROTO_H__
 
+#include <linux/r2proc_ioctl.h>
 #include "lininoio.h"
 
 /*
@@ -36,17 +37,32 @@ struct lininoio_channel {
 	void *priv;
 	struct lininoio_association_data null_adata;
 	struct lininoio_association_data *adata;
+	/* Filled in by channel connect method */
+	int resources_len;
+	struct fw_rsc_hdr *resources;
+	struct list_head list;
+};
+
+/* This corresponds to a remote processor */
+struct lininoio_core {
+	/* Name of related remote processor */
+	char rproc_name[33];
+	struct r2p_processor_data pd;
+	int nchannels;
+	struct list_head channels;
+	struct lininoio_node *node;
 };
 
 struct lininoio_node {
 	char name[16];
 	struct timeout *alive_to;
+	struct lininoio_core *cores[LININOIO_MAX_NCORES];
 	int nchannels;
-	struct lininoio_channel *channels[LININOIO_MAX_NCHANNELS];
 	void *ll_data;
 	int (*send_packet)(struct lininoio_node *,
 			   const struct lininoio_packet *p);
 	struct list_head list;
+	struct lininoio_channel *channels[LININOIO_MAX_NCHANNELS];
 };
 
 extern const struct lininoio_proto_ops *
@@ -60,5 +76,7 @@ extern int lininoio_send_packet(struct lininoio_node *,
 
 extern int lininoio_init(void);
 
+/* FIXME: IS THIS CORRECT HERE ? */
+#define R2PROC_MISC_DEV "/dev/r2proc"
 
 #endif /* __LININOIO_PROTO_H__ */

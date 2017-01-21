@@ -2,6 +2,7 @@
 #define __LININOIO_H__
 
 #include <stdint.h>
+#include "remoteproc.h"
 
 /*
  * Lininoio transport protocol
