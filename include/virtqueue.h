@@ -30,12 +30,11 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 typedef uint8_t boolean;
 
-#include "openamp/virtio_ring.h"
-#include "openamp/env.h"
-#include "metal/dma.h"
-#include "metal/io.h"
+#include "metal-compat.h"
 
 /*Error Codes*/
 #define VQ_ERROR_BASE                                 -3000
