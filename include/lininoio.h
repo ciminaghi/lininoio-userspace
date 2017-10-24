@@ -27,6 +27,7 @@ enum lininoio_packet_type {
 #define LININOIO_PROTO_RPMSG		0x0003
 
 #define LININOIO_MAX_NCHANNELS		16
+#define LININOIO_MAX_NCORES		8
 #define LININOIO_N_PROTOS		(1 << 13)
 
 /* LININOIO packets */
